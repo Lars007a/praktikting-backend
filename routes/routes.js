@@ -9,7 +9,13 @@ import {
   udpatePost,
   getRatings,
   addRating,
+  addUser,
+  login,
+  getUsers,
+  deleteSingleUser,
 } from "../handlers/handler.js";
+import bcryptjs from "bcryptjs";
+import { requiredUser } from "../mdlwr/auth.js";
 
 //Styrer hvad der sker, når vi går på /etellerandet.
 
@@ -64,66 +70,71 @@ router.get("/post/:id", async function (req, res) {
 });
 
 //Ikke test.
-router.post("/posts", upload.array("image"), async function (req, res) {
-  try {
-    let { title, text, category } = req.body;
+router.post(
+  "/posts",
+  requiredUser,
+  upload.array("image"),
+  async function (req, res) {
+    try {
+      let { title, text, category } = req.body;
 
-    if (!title) {
-      throw new Error("Ingen titel");
+      if (!title) {
+        throw new Error("Ingen titel");
+      }
+
+      if (!text) {
+        throw new Error("Ingen text field!");
+      }
+
+      if (!category) {
+        throw new Error("Ingen category!");
+      }
+
+      if (!req.files || req.files.length == 0) {
+        throw new Error("Ingen billeder uploaded! Skal uploades!");
+      }
+
+      let uploadedImgs = [];
+      for (let i = 0; i < req.files.length; i++) {
+        uploadedImgs.push(
+          `${process.env.SERVER_HOST}/uploads/${req.files[i].filename}`
+        );
+      }
+
+      const comments = [];
+      const likes = 0;
+      const date = Date.now();
+      category = JSON.parse(category); //Gør det til en ordentlig array, og ikke bare en string.
+
+      const postObj = {
+        title,
+        date,
+        text,
+        likes,
+        comments,
+        category,
+        img: uploadedImgs,
+      };
+
+      const result = await createPost(postObj);
+
+      return res.status(201).send({
+        status: "ok",
+        message: "Post lavet.",
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).send({
+        status: "not ok",
+        message: error.message,
+        data: null,
+      });
     }
-
-    if (!text) {
-      throw new Error("Ingen text field!");
-    }
-
-    if (!category) {
-      throw new Error("Ingen category!");
-    }
-
-    if (!req.files) {
-      throw new Error("Ingen billeder uploaded! Skal uploades!");
-    }
-
-    const uploadedImgs = [];
-    for (let i = 0; i < req.files.length; i++) {
-      uploadedImgs.push(
-        `${process.env.SERVER_HOST}/uploads/${req.files[i].filename}`
-      );
-    }
-
-    const comments = [];
-    const likes = 0;
-    const date = Date.now();
-    category = JSON.parse(category); //Gør det til en ordentlig array, og ikke bare en string.
-
-    const postObj = {
-      title,
-      date,
-      text,
-      likes,
-      comments,
-      category,
-      imgs: uploadedImgs,
-    };
-
-    const result = await createPost(postObj);
-
-    return res.status(201).send({
-      status: "ok",
-      message: "Post lavet.",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).send({
-      status: "not ok",
-      message: error.message,
-      data: null,
-    });
   }
-});
+);
 
 //Ikke test.
-router.delete("/post/:id", async (req, res) => {
+router.delete("/post/:id", requiredUser, async (req, res) => {
   try {
     const result = await deleteSingle(req.params.id);
 
@@ -173,31 +184,35 @@ router.post("/addComment/:id", async function (req, res) {
 });
 
 //Ikke test.
-router.delete("/deleteComment/:postid/:commentid", async function (req, res) {
-  try {
-    let data = await getSinglePost(req.params.id);
+router.delete(
+  "/deleteComment/:postid/:commentid",
+  requiredUser,
+  async function (req, res) {
+    try {
+      let data = await getSinglePost(req.params.postid);
 
-    const index = data.comments.findIndex(
-      (element) => element._id == req.params.commentid
-    );
+      const index = data.comments.findIndex(
+        (element) => element._id == req.params.commentid
+      );
 
-    data.comments.splice(index, 1);
+      data.comments.splice(index, 1);
 
-    const result = await udpatePost(data);
+      const result = await udpatePost(data);
 
-    return res.status(200).send({
-      status: "ok",
-      message: "Kommentar blev fjernet.",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).send({
-      status: "not ok",
-      message: error.message,
-      data: null,
-    });
+      return res.status(200).send({
+        status: "ok",
+        message: "Kommentar blev fjernet.",
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).send({
+        status: "not ok",
+        message: error.message,
+        data: null,
+      });
+    }
   }
-});
+);
 
 //change method //Ikke test.
 router.patch("/incrementLike/:id", async (req, res) => {
@@ -264,52 +279,60 @@ router.get("/getNumberOfPosts", async (req, res) => {
   }
 });
 
-router.put("/updatePost/:id", upload.array("image"), async (req, res) => {
-  try {
-    let { title, text, category } = req.body;
-    if (!title || !text || !category || !req.files) {
-      throw new Error("Alt information skal være med!");
+router.put(
+  "/updatePost/:id",
+  requiredUser,
+  upload.array("image"),
+  async (req, res) => {
+    try {
+      let { title, text, category } = req.body;
+      if (!title || !text || !category) {
+        throw new Error("Alt information skal være med!");
+      }
+      const oldPost = await getSinglePost(req.params.id);
+
+      let uploadedImgs = [];
+      if (req.files.length > 0) {
+        for (let i = 0; i < req.files.length; i++) {
+          uploadedImgs.push(
+            `${process.env.SERVER_HOST}/uploads/${req.files[i].filename}`
+          );
+        }
+      } else {
+        uploadedImgs = [...oldPost.img];
+      }
+      const comments = oldPost.comments;
+      const likes = oldPost.likes;
+      const date = oldPost.date;
+      category = JSON.parse(category); //Gør det til en ordentlig array, og ikke bare en string.
+
+      const postObj = {
+        id: oldPost._id,
+        title,
+        date,
+        text,
+        likes,
+        comments,
+        category,
+        img: uploadedImgs,
+      };
+
+      const result = await udpatePost(postObj);
+
+      return res.status(201).send({
+        status: "ok",
+        message: "Post ændret!",
+        data: result,
+      });
+    } catch (error) {
+      return res.status(500).send({
+        status: "not ok",
+        message: error.message,
+        data: null,
+      });
     }
-    const uploadedImgs = [];
-    for (let i = 0; i < req.files.length; i++) {
-      uploadedImgs.push(
-        `${process.env.SERVER_HOST}/uploads/${req.files[i].filename}`
-      );
-    }
-
-    const oldPost = await getSinglePost(req.params.id);
-
-    const comments = oldPost.comments;
-    const likes = oldPost.likes;
-    const date = oldPost.date;
-    category = JSON.parse(category); //Gør det til en ordentlig array, og ikke bare en string.
-
-    const postObj = {
-      id: oldPost._id,
-      title,
-      date,
-      text,
-      likes,
-      comments,
-      category,
-      imgs: uploadedImgs,
-    };
-
-    const result = await udpatePost(postObj);
-
-    return res.status(201).send({
-      status: "ok",
-      message: "Post lavet.",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).send({
-      status: "not ok",
-      message: error.message,
-      data: null,
-    });
   }
-});
+);
 router.get("/getRating", async (req, res) => {
   try {
     const result = await getRatings();
@@ -358,6 +381,88 @@ router.post("/sendRating", async function (req, res) {
       data: null,
     });
   }
+});
+
+router.post("/login", async function (req, res) {
+  try {
+    let { email, password } = req.body;
+
+    const result = await login({ email, password });
+
+    return res.status(200).send({
+      status: "ok",
+      message: "Bruger logget ind!",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: "not ok",
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+router.post("/addUser", requiredUser, async function (req, res) {
+  try {
+    let { email, name, password } = req.body;
+
+    const hashed = await bcryptjs.hash(password, 10);
+
+    const result = await addUser({ email, name, password: hashed });
+
+    return res.status(200).send({
+      status: "ok",
+      message: "Bruger blev lavet!",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: "not ok",
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+router.get("/getUsers", requiredUser, async function (req, res) {
+  try {
+    const result = await getUsers();
+
+    return res.status(200).send({
+      status: "ok",
+      message: "Bruger blev fundet",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: "not ok",
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+router.delete("/removeUser/:id", requiredUser, async function (req, res) {
+  try {
+    const result = await deleteSingleUser(req.params.id);
+
+    return res.status(200).send({
+      status: "ok",
+      message: "Bruger blev fundet og fjernet",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      status: "not ok",
+      message: error.message,
+      data: null,
+    });
+  }
+});
+
+router.get("/test", async function (req, res) {
+  console.log(req.user);
 });
 
 export default router;

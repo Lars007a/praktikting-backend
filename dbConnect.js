@@ -9,13 +9,8 @@ if (!process.env.MONGODB_URI) {
   throw new Error("Sæt miljøvariablerne i .env.local.");
 }
 
-mongoose
-  .connect(process.env.MONGODB_URI, {
+export function connectDB() {
+  return mongoose.connect(process.env.MONGODB_URI, {
     bufferCommands: false,
-  })
-  .then(() => {
-    console.log("Connected to db");
-  })
-  .catch((error) => {
-    console.log(error.message);
   });
+}
