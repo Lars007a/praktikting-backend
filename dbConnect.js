@@ -10,6 +10,7 @@ if (!process.env.MONGODB_URI) {
 }
 
 export function connectDB() {
+  //Returnere et promise, som man kan await'e på.
   return mongoose.connect(process.env.MONGODB_URI, {
     bufferCommands: false,
   });
