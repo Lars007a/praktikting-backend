@@ -28,5 +28,7 @@ server.listen(process.env.SERVER_PORT, (error) => {
     return;
   }
 
-  console.log(`Startede serveren på port ${process.env.SERVER_PORT}`);
+  console.log(
+    `Startede serveren på port ${process.env.SERVER_PORT}. Kan indsætte data med npm run setup.`
+  );
 });
