@@ -109,7 +109,7 @@ export async function getRatings() {
 
 export async function getUsers() {
   try {
-    const result = await userModel.find({});
+    const result = await userModel.find({}).select("-password");
     return result;
   } catch (error) {
     throw new Error(error.message);
@@ -141,6 +141,7 @@ export async function login(obj) {
         _id: result._id,
         email: result.email,
         name: result.name,
+        role: result.role,
       },
       jwtSecret,
       { expiresIn: jwtExpires }

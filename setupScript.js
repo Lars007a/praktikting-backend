@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 
 async function setup() {
   const hashedPass = await bcrypt.hash("admin123", 10);
+  const hashedPass2 = await bcrypt.hash("demo123", 10);
 
   await connectDB(); //Forbind til db.
 
@@ -19,7 +20,15 @@ async function setup() {
     email: "admin@admin.dk",
     name: "Hans Hansen",
     password: hashedPass,
+    role: "admin",
   });
+
+  const user2 = await addUser({
+    email: "demo@demo.dk",
+    name: "Jens Jensen",
+    password: hashedPass2,
+    role: "demo",
+  })
 
   try {
     await createPost({

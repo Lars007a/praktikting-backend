@@ -15,7 +15,8 @@ import {
   deleteSingleUser,
 } from "../handlers/handler.js";
 import bcryptjs from "bcryptjs";
-import { requiredUser } from "../mdlwr/auth.js";
+import { requiredAdmin, requiredLogin } from "../mdlwr/auth.js";
+import jwt from "jsonwebtoken";
 
 //Styrer hvad der sker, når vi går på /etellerandet.
 
@@ -72,7 +73,8 @@ router.get("/post/:id", async function (req, res) {
 //Ikke test.
 router.post(
   "/posts",
-  requiredUser,
+  requiredLogin,
+  requiredAdmin,
   upload.array("image"),
   async function (req, res) {
     try {
@@ -134,7 +136,7 @@ router.post(
 );
 
 //Ikke test.
-router.delete("/post/:id", requiredUser, async (req, res) => {
+router.delete("/post/:id", requiredLogin, requiredAdmin, async (req, res) => {
   try {
     const result = await deleteSingle(req.params.id);
 
@@ -186,7 +188,8 @@ router.post("/addComment/:id", async function (req, res) {
 //Ikke test.
 router.delete(
   "/deleteComment/:postid/:commentid",
-  requiredUser,
+  requiredLogin,
+  requiredAdmin,
   async function (req, res) {
     try {
       let data = await getSinglePost(req.params.postid);
@@ -281,7 +284,7 @@ router.get("/getNumberOfPosts", async (req, res) => {
 
 router.put(
   "/updatePost/:id",
-  requiredUser,
+  requiredLogin, requiredAdmin,
   upload.array("image"),
   async (req, res) => {
     try {
@@ -403,7 +406,7 @@ router.post("/login", async function (req, res) {
   }
 });
 
-router.post("/addUser", requiredUser, async function (req, res) {
+router.post("/addUser", requiredLogin, requiredAdmin, async function (req, res) {
   try {
     let { email, name, password } = req.body;
 
@@ -425,9 +428,10 @@ router.post("/addUser", requiredUser, async function (req, res) {
   }
 });
 
-router.get("/getUsers", requiredUser, async function (req, res) {
+router.get("/getUsers", requiredLogin, async function (req, res) {
   try {
     const result = await getUsers();
+
 
     return res.status(200).send({
       status: "ok",
@@ -443,7 +447,7 @@ router.get("/getUsers", requiredUser, async function (req, res) {
   }
 });
 
-router.delete("/removeUser/:id", requiredUser, async function (req, res) {
+router.delete("/removeUser/:id", requiredLogin, requiredAdmin, async function (req, res) {
   try {
     const result = await deleteSingleUser(req.params.id);
 
@@ -461,8 +465,23 @@ router.delete("/removeUser/:id", requiredUser, async function (req, res) {
   }
 });
 
-router.get("/test", async function (req, res) {
-  console.log(req.user);
+
+router.get("/auth", (req, res) => {
+
+
+  if(req.user != null) {
+    return res.status(200).send({
+          status: "ok",
+          message: "Valid token",
+          data: req.user,
+    });
+  }else {
+    return res.status(401).send({
+          status: "not ok",
+          message: "Invalid token",
+          data: null,      
+    })
+  }
 });
 
 export default router;

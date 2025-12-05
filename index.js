@@ -3,7 +3,7 @@ import cors from "cors";
 import * as dotenv from "dotenv";
 import { connectDB } from "./dbConnect.js";
 import router from "./routes/routes.js";
-import { requiredUser, loadUserFromToken } from "./mdlwr/auth.js";
+import { loadUserFromToken } from "./mdlwr/auth.js";
 
 dotenv.config({ path: "./.env.local" }); //Tilføjer den til alle dine miljøvariabler, når du køre .config med en path til filen med dine nye miljøvariabler du ville have tilføjet.
 
