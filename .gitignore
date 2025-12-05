@@ -29,3 +29,5 @@ uploadsDir/*
 !uploadsDir/img17.jpg
 
 node_modules
+
+.env.local
