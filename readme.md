@@ -2,7 +2,7 @@
 Projekt lavet i node og express.
 Backenden til frontenden https://github.com/Lars007a/praktikting.
 Opret en .env.local fil i roden af projektet med følgende: 
-`SERVER_PORT = 3043
+`PORT = 3043
 SERVER_HOST=http://localhost:3043
 MONGODB_URI=mongoconnectionstring
 JWT_SECRET=jwtsecretstring`

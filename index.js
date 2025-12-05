@@ -22,13 +22,13 @@ server.use("/uploads", express.static("uploadsDir")); //Ha uploadsDir mappen bli
 //Setup routes her.
 server.use(router);
 
-server.listen(process.env.SERVER_PORT, (error) => {
+server.listen(process.env.PORT || 3000, (error) => {
   if (error) {
     console.log("Skete en fejl, kunne ikke starte serveren...");
     return;
   }
 
   console.log(
-    `Startede serveren på port ${process.env.SERVER_PORT}. Kan indsætte data med npm run setup.`
+    `Startede serveren på port ${process.env.PORT || 3000}. Kan indsætte data med npm run setup.`
   );
 });
